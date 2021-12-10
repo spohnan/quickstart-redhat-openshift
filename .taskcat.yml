@@ -30,7 +30,7 @@ tests:
   #  parameters:
   #    OpenshiftContainerPlatformVersion: '4.3'
   #  regions:
-   #   - us-east-2
+  #   - us-east-2
   os4-dns:
     parameters:
       HostedZoneID: Z31IF6ZTTII4TH
