@@ -35,6 +35,10 @@ Parameters:
     Description: (Optional) Provide an IAM Instance profile name to use for worker nodes
     Type: String
     Default: ''
+  NetworkPrefixListId:
+    Description: (Optional) A network prefix list to add for external access
+    Type: String
+    Default: 'pl-60b85b09'
 Metadata:
   cfn-lint:
     config:
@@ -96,6 +100,16 @@ Resources:
           ToPort: 6443
           FromPort: 6443
           CidrIp: !Ref VpcCidr
+        - IpProtocol: tcp
+          ToPort: 443
+          FromPort: 443
+          Description: 'Access from AWS Corp Network'
+          SourcePrefixListId: !Ref NetworkPrefixListId
+        - IpProtocol: tcp
+          ToPort: 6443
+          FromPort: 6443
+          Description: 'Access from AWS Corp Network'
+          SourcePrefixListId: !Ref NetworkPrefixListId
         - IpProtocol: tcp
           FromPort: 22623
           ToPort: 22623
@@ -253,6 +267,28 @@ Resources:
       CidrIp: !Ref ContainerAccessCIDR
 
   WorkerIngressPassthroughTCPLoadBalancer:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateApplicationIngressRule
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 80
+      FromPort: 80
+      Description: 'Access from AWS Corp Network'
+      SourcePrefixListId: !Ref NetworkPrefixListId
+
+  WorkerIngressTLSPrefixList:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateApplicationIngressRule
+    Properties:
+      GroupId: !GetAtt WorkerSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 443
+      FromPort: 443
+      Description: 'Access from AWS Corp Network'
+      SourcePrefixListId: !Ref NetworkPrefixListId
+
+  WorkerIngressHTTPPrefixList:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateApplicationIngressRule
     Properties:

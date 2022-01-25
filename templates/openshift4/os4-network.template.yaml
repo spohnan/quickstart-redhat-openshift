@@ -42,7 +42,10 @@ Parameters:
     Description: The CIDR IP range that is permitted to access the instances We recommend
       that you set this value to a trusted IP range.
     Type: String
-
+  NetworkPrefixListId:
+    Description: (Optional) A network prefix list to add for external access
+    Type: String
+    Default: 'pl-60b85b09'
 Metadata:
   cfn-lint:
     config:
@@ -119,8 +122,17 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: !Ref ContainerAccessCIDR
+        - IpProtocol: tcp
+          ToPort: 443
+          FromPort: 443
+          Description: 'Access from AWS Corp Network'
+          SourcePrefixListId: !Ref NetworkPrefixListId
+        - IpProtocol: tcp
+          ToPort: 80
+          FromPort: 80
+          Description: 'Access from AWS Corp Network'
+          SourcePrefixListId: !Ref NetworkPrefixListId
       VpcId: !Ref VpcId
-
 
   ExtPassthroughElb:
     Condition: HasACMCertificate
@@ -488,12 +500,24 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - Type: forward
-          TargetGroupArn:
-            Ref: ExternalApiTargetGroup
+      - Type: forward
+        TargetGroupArn:
+          Ref: ExternalApiTargetGroup
       LoadBalancerArn:
         Ref: ExtApiElb
       Port: 6443
+      Protocol: TCP
+
+  ExternalApiListenerB:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: ExternalApiTargetGroup
+      LoadBalancerArn:
+        Ref: ExtApiElb
+      Port: 443
       Protocol: TCP
 
   ExternalApiTargetGroup:
@@ -507,6 +531,8 @@ Resources:
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: '60'
+        - Key: preserve_client_ip.enabled
+          Value: true
 
   InternalApiListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
