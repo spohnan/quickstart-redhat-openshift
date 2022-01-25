@@ -5,7 +5,7 @@
 .taskcat
 taskcat_outputs
 .taskcat-backup
-build/
+output/
 functions/packages
 
 # Lambda

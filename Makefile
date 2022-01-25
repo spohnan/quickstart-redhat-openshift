@@ -1,10 +1,18 @@
 .PHONY: build clean publish
 
+ACL ?= 'private'
+BUCKET ?=
+PREFIX ?= quickstart-redhat-openshift
+PROFILE ?= default
+REGION ?= $(shell aws configure get region --profile $(PROFILE))
 REPO_NAME ?= aws-ocp
 VENV_NAME?=venv
 VENV_ACTIVATE=. $(VENV_NAME)/bin/activate
 PYTHON=${VENV_NAME}/bin/python3
 PYTHON3 := $(shell python3 -V 2>&1)
+
+region:
+	@echo $(REGION)
 
 help:
 	@echo   "make test  : executes taskcat"
@@ -28,6 +36,24 @@ build: build_lambda
       sed -i "s|Default: $(PREFIX)/|Default: $(PREFIX)-versions/$(VERSION)/|g" output/build/templates/*.yaml ; \
     fi
 	cd output/build/ && zip -X -r ../release.zip .
+
+publish:
+	if [ "$(BUCKET)" == "" ] ; then \
+      echo BUCKET must be specified to publish; exit 1; \
+    fi
+	if [ "$(REGION)" == "" ] ; then \
+      echo REGION must be specified to publish; exit 1; \
+    fi
+	if [ $(shell echo $(VERSION) | grep -c dev) -eq 0 ] ; then \
+		if [ "$(GH_RELEASE)" == "true" ] ; then \
+			hub release create -m v$(VERSION) -a "output/release.zip#$(PREFIX)-s3-package-v$(VERSION).zip" v$(VERSION) ;\
+		fi ; \
+	fi
+	if [ "$(VERSION)" == "" ] ; then \
+	  cd output/build && ../../build/s3_sync.py $(BUCKET) $(REGION) $(PROFILE) $(PREFIX)/ ./ $(ACL) ; \
+	else \
+	  cd output/build && ../../build/s3_sync.py $(BUCKET) $(REGION) $(PROFILE) $(PREFIX)-versions/ ./ $(ACL) ; \
+	fi
 
 verify:
 ifdef PYTHON3
